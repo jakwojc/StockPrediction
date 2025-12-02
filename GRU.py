@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 
 class StockGRU(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dim, n_layers):
+    def __init__(self, input_dim, output_dim, hidden_dim, n_layers, dropout=0.2):
         super().__init__()
         
         self.input_dim = input_dim
@@ -11,20 +11,17 @@ class StockGRU(torch.nn.Module):
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
         
-        self.gru = torch.nn.GRU(input_dim, hidden_dim, n_layers)
-        
-        self.fc = torch.nn.Linear(hidden_dim,output_dim)
-        
+        self.gru = torch.nn.GRU(input_dim, hidden_dim, n_layers, batch_first=True, dropout=dropout if n_layers > 1 else 0)
+
+        self.fc = torch.nn.Linear(hidden_dim, output_dim)
+
     def forward(self,x):
-        h0 = torch.randn(
-            self.n_layers,
-            self.hidden_dim
-        )
-        
-        out,_ = self.gru(x,h0)
-        
-        out = self.fc(out)
-        
+        batch_size = x.size(0)
+        h0 = torch.zeros(self.n_layers, batch_size, self.hidden_dim).to(x.device)
+
+        out, _ = self.gru(x, h0)
+        out = self.fc(out[:, -1, :])
+
         return out
     
 class Optimization:
@@ -34,8 +31,9 @@ class Optimization:
         self.optimizer = optimizer
         self.train_losses = []
         self.val_losses = []
-        self.device = torch.float32
-    
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model.to(self.device)
+
     def train_step(self, x, y):
         # Sets model to train mode
         self.model.train()
@@ -83,6 +81,7 @@ class Optimization:
                 print(
                     f"[{epoch}/{n_epochs}] Training loss: {training_loss:.4f}\t Validation loss: {validation_loss:.4f}"
                 )
+
     def evaluate(self, test_loader, batch_size=1, n_features=1):
         with torch.no_grad():
             predictions = []
@@ -92,7 +91,7 @@ class Optimization:
                 y_test = y_test.to(self.device)
                 self.model.eval()
                 yhat = self.model(x_test)
-                predictions.append(yhat.to(self.device).detach().numpy())
-                values.append(y_test.to(self.device).detach().numpy())
+                predictions.append(yhat.cpu().detach().numpy())
+                values.append(y_test.cpu().detach().numpy())
 
         return predictions, values
