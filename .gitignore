@@ -5,4 +5,5 @@ Scripts
 share
 pyvenv.cfg
 test.ipynb
+__pycache__/*
 venv
