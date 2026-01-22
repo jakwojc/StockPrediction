@@ -1,5 +1,9 @@
-numpy
+numpy>=2.02
 pandas
 matplotlib
 torch
 scikit-learn
+pmdarima
+sktime
+seaborn
+statsforecast
