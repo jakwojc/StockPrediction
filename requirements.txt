@@ -7,3 +7,7 @@ pmdarima
 sktime
 seaborn
 statsforecast
+neuralforecast
+tqdm
+ipywidgets
+jupyter
